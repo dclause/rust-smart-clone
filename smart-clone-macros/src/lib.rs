@@ -239,12 +239,31 @@ mod tests {
     #[test]
     fn test_unnamed_struct_type() {
         let input = quote! {
-            struct Point3D(i32, i32, i32);
+            struct UnnamedStruct(
+                i32,
+                #[clone = 3]
+                u8,
+                #[clone]
+                Vec<u32>,
+                #[clone(default)]
+                i32,
+                #[clone(custom_value)]
+                vec![],
+                #[clone(clone_with = "wow")]
+                vec![1, 2, 3],
+            );
         };
         let output = quote! {
-            impl Clone for Point3D {
+            impl Clone for UnnamedStruct {
                 fn clone (& self) -> Self {
-                    Point3D(self.0, self.1, self.2)
+                    UnnamedStruct {
+                        0: self.0.clone(),
+                        1: 3,
+                        2: self.2.clone(),
+                        3: Default::default(),
+                        4: custom_value,
+                        5: wow(&self.5),
+                    }
                 }
             }
         };

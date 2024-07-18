@@ -1,67 +1,78 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{DataStruct, Fields, FieldsNamed, FieldsUnnamed, LitInt, LitStr, Meta, Token};
+use syn::{DataStruct, Field, Fields, LitInt, LitStr, Meta, Token};
+use syn::punctuated::Punctuated;
 
-/**
- * Clone an enum.
- */
+enum StructType {
+    Named,
+    Unnamed,
+    // Unit,
+}
+
+// pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStream {
+//     let cloned_fields = match &data_struct.fields {
+//         Fields::Named(fields) => clone_fields(identity, StructType::Named, fields.named),
+//         Fields::Unnamed(fields) => return clone_fields(identity, fields.unnamed),
+//         Fields::Unit => TokenStream::default(),
+//     };
+//
+//     quote! {
+//         Self {
+//             #cloned_fields
+//         }
+//     }
+// }
+
+
+/// Clone an enum.
 pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStream {
-    let cloned_fields = match &data_struct.fields {
-        Fields::Named(fields) => clone_named_fields(fields),
-        Fields::Unnamed(fields) => return clone_unnamed_fields(identity, fields),
-        Fields::Unit => TokenStream::default(),
-    };
-
-    quote! {
-        Self {
-            #cloned_fields
+    match &data_struct.fields {
+        Fields::Named(fields) => {
+            let cloned_fields = clone_fields(StructType::Named, &fields.named);
+            quote! { Self { #cloned_fields } }
         }
+        Fields::Unnamed(fields) => {
+            let cloned_fields = clone_fields(StructType::Unnamed, &fields.unnamed);
+            quote! { #identity { #cloned_fields } }
+        }
+        Fields::Unit => quote! { Self { } }
     }
 }
 
-/**
- * Clone an unnamed field structure type: `Point3D(i32, i32, i32)` annotated using smart clone #[clone...].
- */
-fn clone_unnamed_fields(identity: &Ident, fields: &FieldsUnnamed) -> TokenStream {
-    let field_idents: Vec<_> = fields.unnamed.iter().enumerate().map(|(i, _)| {
-        LitInt::new(&format!("{}", i), proc_macro2::Span::call_site())
-    }).collect();
-    quote! { #identity(#(self.#field_idents),*) }
-}
-
-/**
- * Clone a named field structure type: `Point { x: u8, y: u8 }` annotated using smart clone #[clone...].
- */
-fn clone_named_fields(fields: &FieldsNamed) -> TokenStream {
-    // Loop through the fields of the named fields and clone it appropriately.
-    let clone_fields = fields.named.iter().map(|field| {
+/// Convert fields according to there type.
+fn clone_fields(struct_type: StructType, fields: &Punctuated<Field, Token![,]>) -> TokenStream {
+    let clone_fields = fields.iter().enumerate().map(|(i, field)| {
         let field_name = &field.ident;
+        let field_id = LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
 
         // Check for the `#[clone...]` attribute
         match &field.attrs.iter().find(|attr| attr.path().is_ident("clone")) {
             // Field is not marked: clone it as usual.
-            None => quote! {
-                #field_name: self.#field_name.clone()
-            },
+            None => match struct_type {
+                StructType::Named => quote! { #field_name: self.#field_name.clone() },
+                StructType::Unnamed => quote! { #field_id: self.#field_id.clone() },
+            }
             // Field is marked: smart clone it!
             Some(attr) => match &attr.meta {
                 // Handle `#[clone]` by cloning as usual
-                Meta::Path(_) => quote! {
-                    #field_name: self.#field_name.clone()
-                },
+                Meta::Path(_) => match struct_type {
+                    StructType::Named => quote! { #field_name: self.#field_name.clone() },
+                    StructType::Unnamed => quote! { #field_id: self.#field_id.clone() },
+                }
                 // Handle #[clone = value].
                 Meta::NameValue(item) => {
                     let value = &item.value;
-                    quote! {
-                        #field_name: #value
+                    match struct_type {
+                        StructType::Named => quote! { #field_name: #value },
+                        StructType::Unnamed => quote! { #field_id: #value },
                     }
                 }
                 // Handle `#[clone(item1, item2)]` as `#[clone(items)]`.
                 Meta::List(items) => {
-                    let tokens = &items.tokens;
+                    let tokens = items.tokens.clone();
 
                     // Case #[clone(...)]
-                    let mut clone_value = None::<TokenStream>;
+                    let mut clone_value: Option<TokenStream> = None;
                     let _ = items.parse_nested_meta(|meta| {
                         // `#[clone(default)]` => clone with default value
                         if meta.path.is_ident("default") {
@@ -73,23 +84,28 @@ fn clone_named_fields(fields: &FieldsNamed) -> TokenStream {
                         if meta.path.is_ident("clone_with") && meta.input.peek(Token![=]) {
                             let func: LitStr = meta.value()?.parse()?;
                             let func: TokenStream = func.parse()?;
-                            clone_value = Some(quote! {
-                                #func(&self.#field_name)
-                            });
+                            clone_value = match struct_type {
+                                StructType::Named => Some(quote! {
+                                    #func(&self.#field_name)
+                                }),
+                                StructType::Unnamed => Some(quote! {
+                                    #func(&self.#field_id)
+                                }),
+                            };
                         }
                         Ok(())
                     });
 
-                    match clone_value {
-                        None => quote! { #field_name: #tokens },
-                        Some(value) => quote! {
-                            #field_name: #value
-                        },
+                    let value = clone_value.unwrap_or_else(|| tokens);
+                    match struct_type {
+                        StructType::Named => quote! { #field_name: #value },
+                        StructType::Unnamed => quote! { #field_id: #value },
                     }
                 }
             }
         }
     });
+
     quote! {
         #(#clone_fields,)*
     }

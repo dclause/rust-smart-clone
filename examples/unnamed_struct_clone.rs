@@ -1,16 +1,17 @@
 use smart_clone::SmartClone;
 
 #[derive(SmartClone, PartialEq, Debug)]
-struct Point3D(
+struct Point4D(
+    i32,
     #[clone(default)]
     i32,
-    #[clone(vec ! [2])]
-    vec![],
-    #[clone(clone_with = "SimpleStruct::vec_clone")]
-    vec![1, 2, 3],
+    #[clone(String::from("banana"))]
+    String,
+    #[clone(clone_with = "Point4D::vec_clone")]
+    Vec<u32>,
 );
 
-impl Point3D {
+impl Point4D {
     fn vec_clone(input: &Vec<u32>) -> Vec<u32> {
         input.iter().map(|i| i * 2).collect()
     }
@@ -18,15 +19,19 @@ impl Point3D {
 
 // Will be expanded to :
 // ```
-// impl Clone for Point3D {
-//     fn clone (& self) -> Self {
-//         Point3D(self.0, self.1, self.2)
+// impl Clone for Point4D {
+//     fn clone(&self) -> Self {
+//         Point4D {
+//             0: self.0.clone(),
+//             1: Default::default(),
+//             2: String::from("banana"),
+//             3: Point4D::vec_clone(&self.3),
+//         }
 //     }
 // }
 // ```
 
 fn main() {
-    let point = Point3D(1, 2, 3);
-    ;
-    assert_eq!(point.clone(), Point3D(1, 2, 3));
+    let point = Point4D(1, 2, String::from("apple"), vec![1, 2, 3]);
+    assert_eq!(point.clone(), Point4D(1, 0, "banana".into(), vec![2, 4, 6]));
 }
