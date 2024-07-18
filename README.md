@@ -16,7 +16,7 @@ struct Foo {
     b: i32,
     #[clone(Some(Default::default()))]
     c: Option<i32>,
-    #[clone(fn = Foo::vec_clone)]
+    #[clone(clone_with = "Foo::vec_clone")]
     d: Vec<u32>,
     #[clone("banana".to_owned())]
     e: String,

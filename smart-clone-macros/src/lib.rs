@@ -1,112 +1,37 @@
-extern crate proc_macro;
-
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{Data, DeriveInput, Expr, Fields, Meta, Token};
+use quote::quote;
+use syn::{Data, DeriveInput};
 
+use crate::enum_smart_clone::clone_enum_type;
+use crate::struct_smart_clone::clone_struct_type;
+
+mod struct_smart_clone;
+mod enum_smart_clone;
+
+/// Implementation for the #[derive(SmartClone)] macros.
+/// see in [`smart_clone::smart_clone_derive_macro`] for more details.
 pub fn smart_clone_derive(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
-    let input: DeriveInput = match syn::parse2(input) {
-        Ok(parsed_input) => parsed_input,
-        Err(error) => return error.to_compile_error().into(),
-    };
+    let input: DeriveInput = syn::parse2(input).expect("Impossible to parse macro SmartClone");
 
     // Get the name of the struct
-    let name = input.ident;
+    let structure_name = &input.ident;
 
-    // Get the fields of the struct
-    let fields = match input.data {
-        Data::Struct(data_struct) => match data_struct.fields {
-            Fields::Named(fields_named) => fields_named.named,
-            _ => return quote! { compile_error!("Only named fields are supported"); }.into(),
-        },
-        _ => return quote! { compile_error!("Only structs are supported"); }.into(),
+    // Process the data associated with the #[derive(SmartClone)].
+    let cloned = match input.data {
+        Data::Struct(data_struct) => clone_struct_type(data_struct),
+        Data::Enum(enum_struct) => clone_enum_type(structure_name, enum_struct),
+        Data::Union(_) => return quote! { compile_error!("Cannot use SmartClone on union types.") },
     };
-
-    // Process each field to determine how it should be cloned.
-    let clone_fields = fields.iter().map(|field| {
-        let field_name = &field.ident;
-        let mut custom_clone = None;
-
-        // Check for the `clone` attribute
-        for attr in &field.attrs {
-            if attr.path().is_ident("clone") {
-                custom_clone = Some(attr);
-            }
-        }
-
-        match custom_clone {
-            // no #[custom...] found
-            None => {
-                // Default clone behavior
-                quote! {
-                    #field_name: self.#field_name.clone()
-                }
-            }
-            Some(attr) => {
-                match &attr.meta {
-                    // #[clone = ....]
-                    Meta::NameValue(value) => {
-                        match &value.value {
-                            data => {
-                                quote! {
-                                    #field_name: #data
-                                }
-                            }
-                        }
-                    }
-                    // #[clone(...)]
-                    Meta::List(list) => {
-                        let mut expr: Option<TokenStream> = None;
-                        match list.parse_args::<Expr>() {
-                            Ok(data) => {
-                                expr = Some(data.to_token_stream());
-                            }
-                            Err(_) => {
-                                let _ = list.parse_nested_meta(|meta| {
-                                    // #[clone(fn = ...)]
-                                    if meta.path.is_ident("fn") {
-                                        if meta.input.peek(Token![=]) {
-                                            if expr.is_none() {
-                                                let func: Expr = meta.value()?.parse()?;
-                                                expr = Some(quote!(#func(self.#field_name.clone())));
-                                            }
-                                            // return Err(syn::Error::new(field.span(), "Only one fn function supported"))
-                                        }
-                                    }
-                                    Ok(())
-                                });
-                            }
-                        }
-
-                        quote! {
-                            #field_name: #expr
-                        }
-                    }
-                    _ => {
-                        // Default clone behavior
-                        quote! {
-                            #field_name: self.#field_name.clone()
-                        }
-                    }
-                }
-            }
-        }
-    });
 
     // Generate the implementation of the Clone trait
-    let gen = quote! {
-        impl Clone for #name {
+    quote! {
+        impl Clone for #structure_name {
             fn clone(&self) -> Self {
-                Self {
-                    #(#clone_fields,)*
-                }
+                #cloned
             }
         }
-    };
-
-    // Convert the generated code into a TokenStream and return it
-    gen.into()
+    }
 }
 
 #[cfg(test)]
@@ -144,6 +69,8 @@ mod tests {
             struct Foo {
                 #[clone = foobar]
                 a: u32,
+                #[clone((u8, u8))]
+                b: (u8, u8)
             }
         };
         let output = quote! {
@@ -151,6 +78,7 @@ mod tests {
                  fn clone(&self) -> Self {
                     Self {
                         a: foobar,
+                        b: (u8, u8),
                    }
                 }
             }
@@ -182,12 +110,12 @@ mod tests {
     }
 
     #[test]
-    fn test_with_fn() {
+    fn test_clone_with() {
         let input = quote! {
             struct Baz {
-                #[clone(fn = youpi)]
+                #[clone(clone_with = "youpi")]
                 a: Vec<i32>,
-                #[clone(fn = Foo::bar)]
+                #[clone(clone_with = "Foo::bar")]
                 z: Vec<i32>,
             }
         };
@@ -195,64 +123,94 @@ mod tests {
             impl Clone for Baz {
                 fn clone(&self) -> Self {
                     Self {
-                        a: youpi(self.a.clone()),
-                        z: Foo::bar(self.z.clone()),
+                        a: youpi(&self.a),
+                        z: Foo::bar(&self.z),
                     }
                 }
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone(fn = ...)] tag: {}", result);
+        assert_eq!(result, output.to_string(), "Impl with #[clone(clone_with =...)] tag: {}", result);
     }
 
-    // #[test]
-    // fn test_enum_basic() {
-    //     let input = quote! {
-    //     enum SimpleEnum {
-    //         A,
-    //         B(i32),
-    //         C { x: u8, y: u8 },
-    //     }
-    // };
-    //     let output = quote! {
-    //     impl Clone for SimpleEnum {
-    //         fn clone(&self) -> Self {
-    //             match self {
-    //                 SimpleEnum::A => SimpleEnum::A,
-    //                 SimpleEnum::B(val) => SimpleEnum::B(val.clone()),
-    //                 SimpleEnum::C { x, y } => SimpleEnum::C { x: x.clone(), y: y.clone() },
-    //             }
-    //         }
-    //     }
-    // };
-    //     let result = smart_clone_derive(input).to_string();
-    //     assert_eq!(result, output.to_string(), "Enum basic: {}", result);
-    // }
-    // 
-    // #[test]
-    // fn test_enum_with_clone_attr() {
-    //     let input = quote! {
-    //         enum CustomCloneEnum {
-    //             A,
-    //             #[clone = Some(42)]
-    //             B,
-    //             #[clone(custom_clone_expr)]
-    //             C,
-    //         }
-    //     };
-    //     let output = quote! {
-    //         impl Clone for CustomCloneEnum {
-    //             fn clone(&self) -> Self {
-    //                 match self {
-    //                     CustomCloneEnum::A => CustomCloneEnum::A,
-    //                     CustomCloneEnum::B => CustomCloneEnum::B(Some(42)),
-    //                     CustomCloneEnum::C => CustomCloneEnum::C(custom_clone_expr),
-    //                 }
-    //             }
-    //         }
-    //     };
-    //     let result = smart_clone_derive(input).to_string();
-    //     assert_eq!(result, output.to_string(), "Enum various tags: {}", result);
-    // }
+    #[test]
+    fn test_clone_default() {
+        let input = quote! {
+            struct Baz {
+                #[clone(default)]
+                a: Vec<i32>,
+            }
+        };
+        let output = quote! {
+            impl Clone for Baz {
+                fn clone(&self) -> Self {
+                    Self {
+                        a: Default::default(),
+                    }
+                }
+            }
+        };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Impl with #[clone(default)] tag: {}", result);
+    }
+
+    #[test]
+    fn test_enum_basic() {
+        let input = quote! {
+        enum SimpleEnum {
+            A,
+            B(i32, u32),
+            C { x: u8, y: u8 },
+        }
+    };
+        let output = quote! {
+        impl Clone for SimpleEnum {
+            fn clone(&self) -> Self {
+                match self {
+                    SimpleEnum::A => SimpleEnum::A,
+                    SimpleEnum::B(v0, v1) => SimpleEnum::B(v0.clone(), v1.clone()),
+                    SimpleEnum::C { x, y } => SimpleEnum::C { x: x.clone(), y: y.clone() },
+                }
+            }
+        }
+    };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Enum basic: {}", result);
+    }
+
+    #[test]
+    fn test_enum_with_clone_attr() {
+        let input = quote! {
+            enum CustomCloneEnum {
+                A,
+                #[clone = CustomCloneEnum::B(8, 12)]
+                B(i32, u32),
+                #[clone(custom_clone_expr)]
+                C { x: u8, y: u8 },
+                #[clone(clone_with = "Try::func")]
+                D,
+                #[clone]
+                E,
+                #[clone(default)]
+                F
+            }
+        };
+        let output = quote! {
+            impl Clone for CustomCloneEnum {
+                fn clone(&self) -> Self {
+                    match self {
+                        CustomCloneEnum::A => CustomCloneEnum::A,
+                        CustomCloneEnum::B(..) => CustomCloneEnum::B(8, 12),
+                        CustomCloneEnum::C { x, y } => custom_clone_expr,
+                        CustomCloneEnum::D => Try::func(self),
+                        CustomCloneEnum::E => CustomCloneEnum::E,
+                        CustomCloneEnum::F => Default::default (),
+                    }
+                }
+            }
+        };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Enum various tags: {}", result);
+    }
 }
 
