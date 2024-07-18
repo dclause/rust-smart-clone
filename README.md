@@ -12,9 +12,9 @@ Rust custom-derive macro for Clone with more control on the fields cloned values
 #[derive(SmartClone)]
 struct Foo {
     a: u8, // left for standard clone
-    b: (i32, u32), // left for standard clone
-    c: Option<i32>, // left for standard clone
-    d: Vec<u32>, // left for standard clone
+    b: (i32, u32),
+    c: Option<i32>,
+    d: Vec<u32>,
     #[clone = 12]
     e: u8, // Override with hardcoded value (same as `#[clone(12)]`)
     #[clone(TEST)]
