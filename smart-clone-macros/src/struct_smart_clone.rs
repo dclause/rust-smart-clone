@@ -1,15 +1,15 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{DataStruct, Fields, FieldsNamed, LitStr, Meta, Token};
+use syn::{DataStruct, Fields, FieldsNamed, FieldsUnnamed, LitInt, LitStr, Meta, Token};
 
 /**
  * Clone an enum.
  */
-pub fn clone_struct_type(data_struct: DataStruct) -> TokenStream {
+pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStream {
     let cloned_fields = match &data_struct.fields {
-        Fields::Named(named_fields) => clone_named_fields(named_fields),
-        Fields::Unnamed(_) => quote! { compile_error!("Cannot use SmartClone on tuple struct types."); },
-        Fields::Unit => quote! { compile_error!("Cannot use SmartClone on unit struct types."); },
+        Fields::Named(fields) => clone_named_fields(fields),
+        Fields::Unnamed(fields) => return clone_unnamed_fields(identity, fields),
+        Fields::Unit => TokenStream::default(),
     };
 
     quote! {
@@ -17,6 +17,16 @@ pub fn clone_struct_type(data_struct: DataStruct) -> TokenStream {
             #cloned_fields
         }
     }
+}
+
+/**
+ * Clone an unnamed field structure type: `Point3D(i32, i32, i32)` annotated using smart clone #[clone...].
+ */
+fn clone_unnamed_fields(identity: &Ident, fields: &FieldsUnnamed) -> TokenStream {
+    let field_idents: Vec<_> = fields.unnamed.iter().enumerate().map(|(i, _)| {
+        LitInt::new(&format!("{}", i), proc_macro2::Span::call_site())
+    }).collect();
+    quote! { #identity(#(self.#field_idents),*) }
 }
 
 /**

@@ -8,6 +8,13 @@ use crate::struct_smart_clone::clone_struct_type;
 mod struct_smart_clone;
 mod enum_smart_clone;
 
+/// Defines if a structure or a field uses its default cloning
+/// Or if its value is overridden by the given TokenStream.
+enum CloneMode {
+    Standard,
+    Overridden(TokenStream),
+}
+
 /// Implementation for the #[derive(SmartClone)] macros.
 /// see in [`smart_clone::smart_clone_derive_macro`] for more details.
 pub fn smart_clone_derive(input: TokenStream) -> TokenStream {
@@ -19,7 +26,7 @@ pub fn smart_clone_derive(input: TokenStream) -> TokenStream {
 
     // Process the data associated with the #[derive(SmartClone)].
     let cloned = match input.data {
-        Data::Struct(data_struct) => clone_struct_type(data_struct),
+        Data::Struct(data_struct) => clone_struct_type(structure_name, data_struct),
         Data::Enum(enum_struct) => clone_enum_type(structure_name, enum_struct),
         Data::Union(_) => return quote! { compile_error!("Cannot use SmartClone on union types.") },
     };
@@ -211,6 +218,53 @@ mod tests {
         };
         let result = smart_clone_derive(input).to_string();
         assert_eq!(result, output.to_string(), "Enum various tags: {}", result);
+    }
+
+    #[test]
+    fn test_unit_type() {
+        let input = quote! {
+            struct UnitStruct;
+        };
+        let output = quote! {
+            impl Clone for UnitStruct {
+                fn clone (& self) -> Self {
+                    Self { }
+                }
+            }
+        };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Unit type structures: {}", result);
+    }
+
+    #[test]
+    fn test_unnamed_struct_type() {
+        let input = quote! {
+            struct Point3D(i32, i32, i32);
+        };
+        let output = quote! {
+            impl Clone for Point3D {
+                fn clone (& self) -> Self {
+                    Point3D(self.0, self.1, self.2)
+                }
+            }
+        };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Unnamed structures: {}", result);
+    }
+
+    #[test]
+    fn test_unsupported_types() {
+        let input = quote! {
+            union MyUnion {
+                i: i32,
+                f: f32,
+            }
+        };
+        let output = quote! {
+            compile_error ! ("Cannot use SmartClone on union types.")
+        };
+        let result = smart_clone_derive(input).to_string();
+        assert_eq!(result, output.to_string(), "Unsupported union error: {}", result);
     }
 }
 

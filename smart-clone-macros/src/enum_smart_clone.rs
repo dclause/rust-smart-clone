@@ -2,10 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{DataEnum, Fields, FieldsNamed, FieldsUnnamed, LitStr, Meta, Token, Variant};
 
-enum CloneMode {
-    Standard,
-    Overridden(TokenStream),
-}
+use crate::CloneMode;
 
 /**
  * Clone an enum type.

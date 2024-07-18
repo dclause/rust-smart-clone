@@ -22,3 +22,11 @@ path = "../examples/enum_clone.rs"
 [[example]]
 name = "struct_clone"
 path = "../examples/struct_clone.rs"
+
+[[example]]
+name = "unit_clone"
+path = "../examples/unit_clone.rs"
+
+[[example]]
+name = "unnamed_struct_clone"
+path = "../examples/unnamed_struct_clone.rs"
