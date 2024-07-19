@@ -12,23 +12,20 @@ Rust custom-derive macro for Clone with more control on the fields cloned values
 #[derive(SmartClone)]
 struct Foo {
     a: u8, // left for standard clone
-    b: (i32, u32),
-    c: Option<i32>,
-    d: Vec<u32>,
     #[clone = 12]
-    e: u8, // Override with hardcoded value (same as `#[clone(12)]`)
+    b: u8, // Override with hardcoded value (same as `#[clone(12)]`)
     #[clone(TEST)]
-    f: u8, // In general, prefer this syntax for hardcode, variable or const
+    c: u8, // In general, prefer this syntax for hardcode, variable or const
     #[clone((42, 69))]
-    g: (i32, u32),
+    d: (i32, u32),
     #[clone(default)]
-    h: Vec<Vec<Vec<(u8, u8)>>>, // Reserved 'skip' keyword to clone to Default::default() value (g type must implement `Default`)
+    e: Vec<Vec<Vec<(u8, u8)>>>, // Reserved 'skip' keyword to clone to Default::default() value (g type must implement `Default`)
     #[clone(Some(Default::default()))] // `Some(Default::default())` is not `None` but `Some(0)` !
-    i: Option<i32>,
+    f: Option<i32>,
     #[clone(clone_with = "SimpleStruct::vec_clone")]
-    j: Vec<u32>,
+    g: Vec<u32>,
     #[clone("banana".to_owned())]
-    k: String,
+    h: String,
 }
  ```
 
@@ -39,16 +36,13 @@ impl Clone for SimpleStruct {
     fn clone(&self) -> Self {
         Self {
             a: self.a.clone(),
-            b: self.b.clone(),
-            c: self.c.clone(),
-            d: self.d.clone(),
-            e: 12,
-            f: TEST,
-            g: (42, 69),
-            h: Default::default(),
-            i: Some(Default::default()),
-            j: SimpleStruct::vec_clone(&self.j),
-            k: "banana".to_owned(),
+            b: 12,
+            c: TEST,
+            d: (42, 69),
+            e: Default::default(),
+            f: Some(Default::default()),
+            g: SimpleStruct::vec_clone(&self.j),
+            h: "banana".to_owned(),
         }
     }
 }
