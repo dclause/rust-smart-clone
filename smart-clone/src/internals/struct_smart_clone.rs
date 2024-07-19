@@ -20,7 +20,7 @@ pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStre
             let cloned_fields = clone_fields(StructType::Unnamed, &fields.unnamed);
             quote! { #identity { #cloned_fields } }
         }
-        Fields::Unit => quote! { Self { } }
+        Fields::Unit => quote! { Self { } },
     }
 }
 
@@ -31,19 +31,23 @@ fn clone_fields(struct_type: StructType, fields: &Punctuated<Field, Token![,]>) 
         let field_id = LitInt::new(&format!("{}", i), proc_macro2::Span::call_site());
 
         // Check for the `#[clone...]` attribute
-        match &field.attrs.iter().find(|attr| attr.path().is_ident("clone")) {
+        match &field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("clone"))
+        {
             // Field is not marked: clone it as usual.
             None => match struct_type {
                 StructType::Named => quote! { #field_name: self.#field_name.clone() },
                 StructType::Unnamed => quote! { #field_id: self.#field_id.clone() },
-            }
+            },
             // Field is marked: smart clone it!
             Some(attr) => match &attr.meta {
                 // Handle `#[clone]` by cloning as usual
                 Meta::Path(_) => match struct_type {
                     StructType::Named => quote! { #field_name: self.#field_name.clone() },
                     StructType::Unnamed => quote! { #field_id: self.#field_id.clone() },
-                }
+                },
                 // Handle #[clone = value].
                 Meta::NameValue(item) => {
                     let value = &item.value;
@@ -81,13 +85,13 @@ fn clone_fields(struct_type: StructType, fields: &Punctuated<Field, Token![,]>) 
                         Ok(())
                     });
 
-                    let value = clone_value.unwrap_or_else(|| tokens);
+                    let value = clone_value.unwrap_or(tokens);
                     match struct_type {
                         StructType::Named => quote! { #field_name: #value },
                         StructType::Unnamed => quote! { #field_id: #value },
                     }
                 }
-            }
+            },
         }
     });
 

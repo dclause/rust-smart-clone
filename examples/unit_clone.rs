@@ -3,7 +3,6 @@ use smart_clone::SmartClone;
 #[derive(SmartClone, PartialEq, Debug)]
 struct SimpleUnit;
 
-
 // Will be expanded to :
 // ```
 // impl Clone for SimpleUnit {

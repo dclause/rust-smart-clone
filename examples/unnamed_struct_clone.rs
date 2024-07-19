@@ -3,12 +3,9 @@ use smart_clone::SmartClone;
 #[derive(SmartClone, PartialEq, Debug)]
 struct Point4D(
     i32,
-    #[clone(default)]
-    i32,
-    #[clone(String::from("banana"))]
-    String,
-    #[clone(clone_with = "Point4D::vec_clone")]
-    Vec<u32>,
+    #[clone(default)] i32,
+    #[clone(String::from("banana"))] String,
+    #[clone(clone_with = "Point4D::vec_clone")] Vec<u32>,
 );
 
 impl Point4D {

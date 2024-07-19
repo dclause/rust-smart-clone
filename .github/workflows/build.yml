@@ -1,4 +1,4 @@
-name: Build
+name: CI build and checks
 
 on:
   push:
@@ -21,8 +21,19 @@ jobs:
 
     steps:
 
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - name: Run cargo build
         run: cargo build --verbose
+
+      - name: Run cargo clippy
+        run: cargo clippy --all
+
+      - name: Run cargo fmt
+        run: cargo fmt --all
+
+      - name: Run documentation
+        run: cargo doc --no-deps --package smart-clone

@@ -1,3 +1,5 @@
+#![doc(html_root_url = "https://docs.rs/smart-clone/0.1.0")]
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -18,21 +20,29 @@ mod internals;
 /// This means you can implement the `Clone` trait for a Rust structure (struct, enum, etc.) even if
 /// not all fields implement `Clone`.
 ///
+/// # API
+///
+/// - `#[clone]`: will perform cloning as usual for your field. Equivalent to no annotation.
+/// - `#[clone = xxx]`: will set the value `xxx` to the field when the structure is cloned
+/// - `#[clone(xxx)]`: same as above, but `xxx` can be whatever you want here, not just a literal
+/// - `#[clone(clone_with = "xxx")]`: the field will be passed by reference to a function called `xxx` and the
+/// returned value will be used when the structure is cloned.
+///
 /// # Examples
 ///
 /// ```
 /// use smart_clone::SmartClone;
 ///
-/// fn main() {
+/// # fn main() {
 ///   #[derive(SmartClone)]
 ///   struct Foo {
 ///       #[clone(12)]
-///       a: i32, // will always be clone to value 12
+///       a: i32, // will always be cloned to value 12
 ///       #[clone("banana".to_owned())]
 ///       b: String, // this field will always clone to String `banana`
 ///       #[clone(default)]
 ///       c: Option<i32>, // this field will always be reset to default when Foo is cloned
-///       #[clone(clone_with = "Foo::vec_clone")]
+///       #[clone(clone_with = "double")]
 ///       d: Vec<u32>, // uses a custom method to clone this field
 ///       #[clone("banana".to_owned())]
 ///       e: String,
@@ -53,7 +63,7 @@ mod internals;
 ///       #[clone(default)]
 ///       G { x: u8, y: u8 },
 ///   }
-/// }
+/// # }
 /// ```
 #[proc_macro_derive(SmartClone, attributes(clone))]
 pub fn smart_clone_derive_macro(input: TokenStream) -> TokenStream {

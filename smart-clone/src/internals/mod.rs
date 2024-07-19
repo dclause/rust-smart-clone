@@ -7,8 +7,8 @@ use syn::{Data, DeriveInput};
 use enum_smart_clone::clone_enum_type;
 use struct_smart_clone::clone_struct_type;
 
-mod struct_smart_clone;
 mod enum_smart_clone;
+mod struct_smart_clone;
 
 /// Defines if a structure or a field uses its default cloning
 /// Or if its value is overridden by the given TokenStream.
@@ -68,7 +68,12 @@ mod tests {
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone] or NO tag: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Impl with #[clone] or NO tag: {}",
+            result
+        );
     }
 
     #[test]
@@ -93,7 +98,12 @@ mod tests {
         };
 
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone = ...] tag: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Impl with #[clone = ...] tag: {}",
+            result
+        );
     }
 
     #[test]
@@ -114,7 +124,12 @@ mod tests {
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone(...)] tag: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Impl with #[clone(...)] tag: {}",
+            result
+        );
     }
 
     #[test]
@@ -138,7 +153,12 @@ mod tests {
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone(clone_with =...)] tag: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Impl with #[clone(clone_with =...)] tag: {}",
+            result
+        );
     }
 
     #[test]
@@ -159,29 +179,34 @@ mod tests {
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Impl with #[clone(default)] tag: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Impl with #[clone(default)] tag: {}",
+            result
+        );
     }
 
     #[test]
     fn test_enum_basic() {
         let input = quote! {
-        enum SimpleEnum {
-            A,
-            B(i32, u32),
-            C { x: u8, y: u8 },
-        }
-    };
+            enum SimpleEnum {
+                A,
+                B(i32, u32),
+                C { x: u8, y: u8 },
+            }
+        };
         let output = quote! {
-        impl Clone for SimpleEnum {
-            fn clone(&self) -> Self {
-                match self {
-                    SimpleEnum::A => SimpleEnum::A,
-                    SimpleEnum::B(v0, v1) => SimpleEnum::B(v0.clone(), v1.clone()),
-                    SimpleEnum::C { x, y } => SimpleEnum::C { x: x.clone(), y: y.clone() },
+            impl Clone for SimpleEnum {
+                fn clone(&self) -> Self {
+                    match self {
+                        SimpleEnum::A => SimpleEnum::A,
+                        SimpleEnum::B(v0, v1) => SimpleEnum::B(v0.clone(), v1.clone()),
+                        SimpleEnum::C { x, y } => SimpleEnum::C { x: x.clone(), y: y.clone() },
+                    }
                 }
             }
-        }
-    };
+        };
         let result = smart_clone_derive(input).to_string();
         assert_eq!(result, output.to_string(), "Enum basic: {}", result);
     }
@@ -234,7 +259,12 @@ mod tests {
             }
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Unit type structures: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Unit type structures: {}",
+            result
+        );
     }
 
     #[test]
@@ -284,7 +314,11 @@ mod tests {
             compile_error ! ("Cannot use SmartClone on union types.")
         };
         let result = smart_clone_derive(input).to_string();
-        assert_eq!(result, output.to_string(), "Unsupported union error: {}", result);
+        assert_eq!(
+            result,
+            output.to_string(),
+            "Unsupported union error: {}",
+            result
+        );
     }
 }
-

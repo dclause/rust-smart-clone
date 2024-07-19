@@ -2,10 +2,10 @@ use smart_clone::SmartClone;
 
 #[derive(SmartClone, PartialEq, Debug)]
 struct SimpleStruct {
-    a: u8, // left for standard clone
-    b: (i32, u32), // left for standard clone
+    a: u8,          // left for standard clone
+    b: (i32, u32),  // left for standard clone
     c: Option<i32>, // left for standard clone
-    d: Vec<u32>, // left for standard clone
+    d: Vec<u32>,    // left for standard clone
     #[clone = 12]
     e: u8, // Override with hardcoded value (same as `#[clone(12)]`)
     #[clone(TEST)]
@@ -45,7 +45,6 @@ const TEST: u8 = 3;
 // }
 // ```
 
-
 impl SimpleStruct {
     fn vec_clone(input: &Vec<u32>) -> Vec<u32> {
         input.iter().map(|i| i * 2).collect()
@@ -66,17 +65,20 @@ fn main() {
         j: vec![1, 2, 3],
         k: "apple".to_string(),
     };
-    assert_eq!(foo.clone(), SimpleStruct {
-        a: 42,
-        b: (8, 8),
-        c: Some(42),
-        d: vec![1, 2, 3],
-        e: 12,
-        f: 3,
-        g: (42, 69),
-        h: vec![],
-        i: Some(0),
-        j: vec![2, 4, 6],
-        k: String::from("banana"),
-    });
+    assert_eq!(
+        foo.clone(),
+        SimpleStruct {
+            a: 42,
+            b: (8, 8),
+            c: Some(42),
+            d: vec![1, 2, 3],
+            e: 12,
+            f: 3,
+            g: (42, 69),
+            h: vec![],
+            i: Some(0),
+            j: vec![2, 4, 6],
+            k: String::from("banana"),
+        }
+    );
 }

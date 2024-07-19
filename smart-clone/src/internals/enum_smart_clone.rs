@@ -10,7 +10,11 @@ use crate::internals::CloneMode;
 pub(crate) fn clone_enum_type(identity: &Ident, fields: DataEnum) -> TokenStream {
     let clone_variants = fields.variants.iter().map(|variant| {
         // Check for the `#[clone...]` attribute
-        match &variant.attrs.iter().find(|attr| attr.path().is_ident("clone")) {
+        match &variant
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("clone"))
+        {
             // Field is not marked: clone it as usual.
             None => clone_variant_fields(identity, variant, CloneMode::Standard),
             // Field is marked: smart clone it!
@@ -20,7 +24,11 @@ pub(crate) fn clone_enum_type(identity: &Ident, fields: DataEnum) -> TokenStream
                 // Handle #[clone = value].
                 Meta::NameValue(item) => {
                     let value = &item.value;
-                    clone_variant_fields(identity, variant, CloneMode::Overridden(quote! { #value }))
+                    clone_variant_fields(
+                        identity,
+                        variant,
+                        CloneMode::Overridden(quote! { #value }),
+                    )
                 }
                 // Handle `#[clone(item1, item2)]` as `#[clone(items)]`.
                 Meta::List(items) => {
@@ -46,11 +54,19 @@ pub(crate) fn clone_enum_type(identity: &Ident, fields: DataEnum) -> TokenStream
                     });
 
                     match clone_value {
-                        None => clone_variant_fields(identity, variant, CloneMode::Overridden(quote! { #tokens })),
-                        Some(value) => clone_variant_fields(identity, variant, CloneMode::Overridden(quote! { #value })),
+                        None => clone_variant_fields(
+                            identity,
+                            variant,
+                            CloneMode::Overridden(quote! { #tokens }),
+                        ),
+                        Some(value) => clone_variant_fields(
+                            identity,
+                            variant,
+                            CloneMode::Overridden(quote! { #value }),
+                        ),
                     }
                 }
-            }
+            },
         }
     });
 
@@ -75,7 +91,12 @@ fn clone_variant_fields(identity: &Ident, variant: &Variant, mode: CloneMode) ->
 /**
  * Clone an unit field type: `A` annotated using smart clone #[clone...].
  */
-fn clone_unit_fields(identity: &Ident, variant: &Ident, _: &Fields, mode: CloneMode) -> TokenStream {
+fn clone_unit_fields(
+    identity: &Ident,
+    variant: &Ident,
+    _: &Fields,
+    mode: CloneMode,
+) -> TokenStream {
     match mode {
         CloneMode::Standard => quote! { #identity::#variant => #identity::#variant },
         CloneMode::Overridden(value) => quote! { #identity::#variant => #value },
@@ -85,14 +106,24 @@ fn clone_unit_fields(identity: &Ident, variant: &Ident, _: &Fields, mode: CloneM
 /**
  * Clone an unnamed field type: `B(i32, u32)` annotated using smart clone #[clone...].
  */
-fn clone_unnamed_fields(identity: &Ident, variant: &Ident, fields: &FieldsUnnamed, mode: CloneMode) -> TokenStream {
+fn clone_unnamed_fields(
+    identity: &Ident,
+    variant: &Ident,
+    fields: &FieldsUnnamed,
+    mode: CloneMode,
+) -> TokenStream {
     // Construction of the fields identities (v0, v1, ....).
-    let field_idents: Vec<_> = fields.unnamed.iter().enumerate().map(|(i, _)| {
-        Ident::new(&format!("v{}", i), proc_macro2::Span::call_site())
-    }).collect();
+    let field_idents: Vec<_> = fields
+        .unnamed
+        .iter()
+        .enumerate()
+        .map(|(i, _)| Ident::new(&format!("v{}", i), proc_macro2::Span::call_site()))
+        .collect();
 
     match mode {
-        CloneMode::Standard => quote! { #identity::#variant(#(#field_idents),*) => #identity::#variant(#(#field_idents.clone()),* ) },
+        CloneMode::Standard => {
+            quote! { #identity::#variant(#(#field_idents),*) => #identity::#variant(#(#field_idents.clone()),* ) }
+        }
         CloneMode::Overridden(value) => quote! { #identity::#variant(..) => #value },
     }
 }
@@ -100,12 +131,19 @@ fn clone_unnamed_fields(identity: &Ident, variant: &Ident, fields: &FieldsUnname
 /**
  * Clone a named field type: `Point { x: u8, y: u8, ... }` annotated using smart clone #[clone...].
  */
-fn clone_named_fields(identity: &Ident, variant: &Ident, fields: &FieldsNamed, mode: CloneMode) -> TokenStream {
+fn clone_named_fields(
+    identity: &Ident,
+    variant: &Ident,
+    fields: &FieldsNamed,
+    mode: CloneMode,
+) -> TokenStream {
     // Construction of the fields identities (x, y, ...).
     let field_idents: Vec<_> = fields.named.iter().map(|f| &f.ident).collect();
 
     match mode {
-        CloneMode::Overridden(value) => quote! {  #identity::#variant { #(#field_idents),* } => #value },
+        CloneMode::Overridden(value) => {
+            quote! {  #identity::#variant { #(#field_idents),* } => #value }
+        }
         CloneMode::Standard => {
             // Loop through the fields of the named fields and clone it appropriately.
             let cloned_fields = fields.named.iter().map(|field| {

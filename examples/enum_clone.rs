@@ -7,17 +7,28 @@ enum SimpleEnum {
     #[default]
     A,
     B(usize, usize),
-    C { x: u8, y: u8 },
+    C {
+        x: u8,
+        y: u8,
+    },
     #[clone(SimpleEnum::D(8, 12))]
     D(i32, u32),
     #[clone(SimpleEnum::E { x: 3, y: 4 })]
-    E { x: u8, y: u8 },
+    E {
+        x: u8,
+        y: u8,
+    },
     #[clone(clone_with = "double")]
-    F { x: u8, y: u8 },
+    F {
+        x: u8,
+        y: u8,
+    },
     #[clone(default)]
-    G { x: u8, y: u8 },
+    G {
+        x: u8,
+        y: u8,
+    },
 }
-
 
 // Will be expanded to :
 // ```
@@ -38,7 +49,6 @@ enum SimpleEnum {
 //     }
 // }
 // ```
-
 
 fn double(input: &SimpleEnum) -> SimpleEnum {
     match input {
