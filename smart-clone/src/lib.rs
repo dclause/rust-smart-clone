@@ -2,18 +2,21 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
-use smart_clone_macros::smart_clone_derive;
+use crate::internals::smart_clone_derive;
+
+mod internals;
 
 /// # Smart Clone
 ///
-/// This crate provides a custom derive named `SmartClone`.
+/// This crate provides a custom derive macro called `SmartClone`.
 ///
-/// `SmartClone` is a derive macro that replaces the regular `#[derive(Clone)]` to `impl Clone`.
-/// The main difference is that `#[derive(SmartClone)] allows you to use `#[clone(...)]` attributes
-/// to customize the `.clone()` method.
+/// `SmartClone` is a derive macro that replaces the standard `#[derive(Clone)]` in order to
+/// implement a custom `impl Clone`.
+/// The main difference is that `#[derive(SmartClone)]` allows you to use `#[clone(...)]` attributes
+/// to customize the clone method for each field individually.
 ///
-/// You can therefore create clone-able `struct`s that don't have `Clone` for all their fields - and even `enum`s!
-/// You can also customize the cloning behavior of each field separately.
+/// This means you can implement the `Clone` trait for a Rust structure (struct, enum, etc.) even if
+/// not all fields implement `Clone`.
 ///
 /// # Examples
 ///

@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate code coverage
-        run: cargo tarpaulin --follow-exec --all-features --packages smart-clone-macros --timeout 120 --out Xml --engine llvm --verbose
+        run: cargo tarpaulin --packages smart-clone-internals --out Xml --verbose
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3

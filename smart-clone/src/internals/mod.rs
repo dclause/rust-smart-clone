@@ -1,9 +1,11 @@
+extern crate proc_macro;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput};
 
-use crate::enum_smart_clone::clone_enum_type;
-use crate::struct_smart_clone::clone_struct_type;
+use enum_smart_clone::clone_enum_type;
+use struct_smart_clone::clone_struct_type;
 
 mod struct_smart_clone;
 mod enum_smart_clone;
@@ -16,7 +18,6 @@ enum CloneMode {
 }
 
 /// Implementation for the #[derive(SmartClone)] macros.
-/// see in [`smart_clone::smart_clone_derive_macro`] for more details.
 pub fn smart_clone_derive(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let input: DeriveInput = syn::parse2(input).expect("Impossible to parse macro SmartClone");
@@ -45,7 +46,7 @@ pub fn smart_clone_derive(input: TokenStream) -> TokenStream {
 mod tests {
     use quote::quote;
 
-    use crate::smart_clone_derive;
+    use crate::internals::smart_clone_derive;
 
     #[test]
     fn test_struct_with_no_clone_attr() {

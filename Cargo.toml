@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "smart-clone",
-    "smart-clone-macros",
+    "smart-clone-internals",
 ]
 resolver = "2"
 
@@ -14,3 +14,8 @@ repository = "https://github.com/dclause/rust-smart-clone"
 readme = "README.md"
 license = "MIT"
 rust-version = "1.56"
+
+[workspace.dependencies]
+proc-macro2 = { version = "1.0", features = ["proc-macro"] }
+quote = { version = "1.0", features = ["proc-macro"] }
+syn = { version = "2.0", features = ["full"] }

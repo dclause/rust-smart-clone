@@ -1,5 +1,5 @@
 [package]
-name = "smart-clone-macros"
+name = "smart-clone-internals"
 description = "Inner (private) macros definitions for smart-clone - this crate is used for test coverage purposes only."
 version.workspace = true
 edition.workspace = true
@@ -8,10 +8,13 @@ repository.workspace = true
 readme.workspace = true
 license.workspace = true
 publish = false
+build = "build.rs"
+exclude = ["build.rs"]
 
 [lib]
+path = "lib.rs"
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }

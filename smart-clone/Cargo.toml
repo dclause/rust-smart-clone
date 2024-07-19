@@ -13,7 +13,9 @@ proc-macro = true
 doctest = false
 
 [dependencies]
-smart-clone-macros = { path = "../smart-clone-macros" }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
 
 [[example]]
 name = "enum_clone"

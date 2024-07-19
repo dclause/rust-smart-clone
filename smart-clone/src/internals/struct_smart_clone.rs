@@ -9,21 +9,6 @@ enum StructType {
     // Unit,
 }
 
-// pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStream {
-//     let cloned_fields = match &data_struct.fields {
-//         Fields::Named(fields) => clone_fields(identity, StructType::Named, fields.named),
-//         Fields::Unnamed(fields) => return clone_fields(identity, fields.unnamed),
-//         Fields::Unit => TokenStream::default(),
-//     };
-//
-//     quote! {
-//         Self {
-//             #cloned_fields
-//         }
-//     }
-// }
-
-
 /// Clone an enum.
 pub fn clone_struct_type(identity: &Ident, data_struct: DataStruct) -> TokenStream {
     match &data_struct.fields {
